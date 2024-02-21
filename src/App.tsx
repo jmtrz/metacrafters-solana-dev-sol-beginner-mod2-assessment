@@ -96,19 +96,16 @@ export default function App() {
    * This function is called when the Create a New Solana Account button is clicked
    */
   const createSender = async () => {
-    const senderWallet = sessionStorage.getItem("senderWallet");
+
     // create a new Keypair
-    if(!senderWallet) {
-      const sender = Keypair.generate();
-      
-      setSenderKeypair(sender);
-      alert("Sender Wallet has been Created!");
-  
-      sessionStorage.setItem("senderWalletPublickKey", senderKeypair!.publicKey.toString());
-      sessionStorage.setItem("senderWalletPrivateKey", senderKeypair!.secretKey.toString());
-    }else {
-      alert("sender wallet has already been created");
-    }
+
+    const sender = Keypair.generate();
+    
+    setSenderKeypair(sender);    
+    
+    // sessionStorage.setItem("senderWalletPublickKey", senderKeypair!.publicKey.toString());
+    // sessionStorage.setItem("senderWalletPrivateKey", senderKeypair!.secretKey.toString());
+
     console.log('Sender account: ', senderKeypair!.publicKey.toString());
     console.log('Airdropping 2 SOL to Sender Wallet');
 
@@ -187,25 +184,33 @@ export default function App() {
         SystemProgram.transfer({
             fromPubkey: senderKeypair!.publicKey,
             toPubkey: receiverPublicKey!,
-            lamports: 2 * LAMPORTS_PER_SOL
+            lamports: 1 * LAMPORTS_PER_SOL
         })
     );
 
     // Sign transaction
-    var signature = await sendAndConfirmTransaction(
-        connection,
-        transaction,
-        [senderKeypair!]
-    );
-    sessionStorage.setItem("latestTransactionSignature",signature);
-    console.log("transaction sent and confirmed");
-    console.log("Sender Balance: " + await connection.getBalance(senderKeypair!.publicKey) / LAMPORTS_PER_SOL);
-    console.log("Receiver Balance: " + await connection.getBalance(receiverPublicKey!) / LAMPORTS_PER_SOL);
-    console.log(`Transaction Signature: ${signature}`);
+    try
+    {
+      var signature = await sendAndConfirmTransaction(
+          connection,
+          transaction,
+          [senderKeypair!]
+      );
+      sessionStorage.setItem("latestTransactionSignature",signature);
+      console.log("transaction sent and confirmed");
+      console.log("Sender Balance: " + await connection.getBalance(senderKeypair!.publicKey) / LAMPORTS_PER_SOL);
+      console.log("Receiver Balance: " + await connection.getBalance(receiverPublicKey!) / LAMPORTS_PER_SOL);
+      console.log(`Transaction Signature: ${signature}`);
+    }catch(error) {
+      console.log(error)
+    }
+
+   
   };
 
   const getLatestTransactionSignature = () => {
-    alert(sessionStorage.get("latestTransactionSignature"));
+    const result = sessionStorage.getItem("latestTransactionSignature");
+    alert(result);
   }
 
   // HTML code for the app
@@ -276,7 +281,7 @@ export default function App() {
             <a href="https://phantom.app/">Phantom Browser extension</a>
           </p>
         )}
-        <button onClick={ getLatestTransactionSignature }>Get Latest Transaction</button>
+        <button onClick={ () =>  getLatestTransactionSignature() }>Get Latest Transaction</button>
       </header>
     </div>
   );
