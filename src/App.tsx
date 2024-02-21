@@ -96,22 +96,39 @@ export default function App() {
    * This function is called when the Create a New Solana Account button is clicked
    */
   const createSender = async () => {
+    const senderWallet = sessionStorage.getItem("senderWallet");
     // create a new Keypair
-
-
+    if(!senderWallet) {
+      const sender = Keypair.generate();
+      
+      setSenderKeypair(sender);
+      alert("Sender Wallet has been Created!");
+  
+      sessionStorage.setItem("senderWalletPublickKey", senderKeypair!.publicKey.toString());
+      sessionStorage.setItem("senderWalletPrivateKey", senderKeypair!.secretKey.toString());
+    }else {
+      alert("sender wallet has already been created");
+    }
     console.log('Sender account: ', senderKeypair!.publicKey.toString());
     console.log('Airdropping 2 SOL to Sender Wallet');
 
     // save this new KeyPair into this state variable
-    setSenderKeypair(/*KeyPair here*/);
-
+    setSenderKeypair(senderKeypair);
+  
     // request airdrop into this new account
-    
+    const fromAirDropSignature = await connection.requestAirdrop(
+      new PublicKey(senderKeypair!.publicKey),
+      2 * LAMPORTS_PER_SOL
+    );   
 
     const latestBlockHash = await connection.getLatestBlockhash();
 
     // now confirm the transaction
-
+    await connection.confirmTransaction({
+      blockhash: latestBlockHash.blockhash,
+      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      signature: fromAirDropSignature
+    });
     console.log('Wallet Balance: ' + (await connection.getBalance(senderKeypair!.publicKey)) / LAMPORTS_PER_SOL);
   }
 
@@ -127,9 +144,10 @@ export default function App() {
     if (solana) {
       try {
         // connect to phantom wallet and return response which includes the wallet public key
-
+        const response = await solana.connect();        
+        console.log('wallet account ', response.publicKey.toString());
         // save the public key of the phantom wallet to the state variable
-        setReceiverPublicKey(/*PUBLIC KEY*/);
+        setReceiverPublicKey( response.publicKey);
       } catch (err) {
         console.log(err);
       }
@@ -165,11 +183,30 @@ export default function App() {
     // create a new transaction for the transfer
 
     // send and confirm the transaction
+      var transaction = new Transaction().add(
+        SystemProgram.transfer({
+            fromPubkey: senderKeypair!.publicKey,
+            toPubkey: receiverPublicKey!,
+            lamports: 2 * LAMPORTS_PER_SOL
+        })
+    );
 
+    // Sign transaction
+    var signature = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        [senderKeypair!]
+    );
+    sessionStorage.setItem("latestTransactionSignature",signature);
     console.log("transaction sent and confirmed");
     console.log("Sender Balance: " + await connection.getBalance(senderKeypair!.publicKey) / LAMPORTS_PER_SOL);
     console.log("Receiver Balance: " + await connection.getBalance(receiverPublicKey!) / LAMPORTS_PER_SOL);
+    console.log(`Transaction Signature: ${signature}`);
   };
+
+  const getLatestTransactionSignature = () => {
+    alert(sessionStorage.get("latestTransactionSignature"));
+  }
 
   // HTML code for the app
   return (
@@ -239,6 +276,7 @@ export default function App() {
             <a href="https://phantom.app/">Phantom Browser extension</a>
           </p>
         )}
+        <button onClick={ getLatestTransactionSignature }>Get Latest Transaction</button>
       </header>
     </div>
   );
